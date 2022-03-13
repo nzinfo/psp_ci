@@ -1,11 +1,46 @@
 Vagrant.configure("2") do |config|
   
   config.vm.box = "ubuntu/focal64"
-  #config.vm.network "forwarded_port", guest: 80, host: 8080
-  #config.vm.network "forwarded_port", guest: 8043, host: 8043
-  #config.vm.network "forwarded_port", guest: 22, host: 8022
   
-  config.vm.provider "virtualbox" do |v|
+  # hostmanager.
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.manage_guest = true
+  config.hostmanager.ignore_private_ip = false
+  config.hostmanager.include_offline = true
+
+  # proxy setting
+  if Vagrant.has_plugin?("vagrant-proxyconf") && ENV["HTTP_PROXY"]
+      config.proxy.http     = ENV["HTTP_PROXY"]
+      config.proxy.https    = ENV["HTTP_PROXY"]
+      config.proxy.no_proxy = "localhost,127.0.0.1"
+  end
+
+  #turn vbguest auto update on.
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
+  end
+
+  # pass global env to vm. eg. secret key to aliyun ? 
+  provision_environment = {
+    "VAULT_AUTH_TOKEN" => ENV["VAULT_AUTH_TOKEN"]
+  }
+
+  # As of VirtualBox 6.1.28, host-only network adapters are restricted to IPs 
+  # in the range 192.168.56.0/21 by default (192.168.56.1 -> 192.168.63.254).
+  config.vm.define 'git-box' do |gitnode|
+
+    gitnode.vm.hostname = 'gitea'
+    gitnode.vm.network :private_network, ip: '192.168.62.22'
+    gitnode.hostmanager.aliases = %w(git.local gitea.pci)
+    
+    # git usage
+    gitnode.vm.network "forwarded_port", guest: 8080, host: 8080
+    gitnode.vm.network "forwarded_port", guest: 8022, host: 8022
+    # drone usage
+
+    # customized virtualbox
+    gitnode.vm.provider "virtualbox" do |v|
       v.memory = 1024
       v.cpus = 2
       v.gui = false
@@ -14,64 +49,25 @@ Vagrant.configure("2") do |config|
       # allow resolution of addresses from a VPN
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+    end
+
+    # NOTE: Be careful here, the VM has access to *everything* in the home
+    # directory on the host machine
+    gitnode.vm.synced_folder ENV["HOME"]+"/personal_ci", "/vagrant_data", owner: "vagrant", group: "vagrant"
+    ## config.vm.synced_folder ENV["HOME"]+"/personal_ci", "/vagrant_home",  owner: "vagrant", group: "vagrant", \
+      # type: "nfs", mount_options: ['nolock,vers=3,udp,noatime,actimeo=1']
+
+    # provision only once.
+    gitnode.vm.provision "shell", env: provision_environment , path: "provisions/setup.sh"
+      
+    # start each time vm boot.
+    gitnode.vm.provision "shell", env: provision_environment , run: "always", path: "provisions/startup.sh"
+
   end
-  # 
-  config.vm.hostname = "git-podman-host"
-
-  # pass global env to vm.
-  provision_environment = {
-    "VAULT_AUTH_TOKEN" => ENV["VAULT_AUTH_TOKEN"]
-  }
-
-  # NOTE: Be careful here, the VM has access to *everything* in the home
-  # directory on the host machine
-  config.vm.synced_folder ENV["HOME"]+"/personal_ci", "/vagrant_home", owner: "vagrant", group: "vagrant"
 
   # Setup mirrors
   # config.vm.provision :shell, :inline => "sed -i 's|deb http://archive.ubuntu.com.ubuntu|deb mirror://mirrors.ubuntu.com/mirrors.txt|g' /etc/apt/sources.list"
   # config.vm.provision "shell", inline: "sed -i '/deb-src/d' /etc/apt/sources.list"
   # config.vm.provision "shell", inline: "apt-get update -y"
-
-  config.vm.provision "shell", env: provision_environment , inline: <<-SHELL
-    # "Replacing source list"
-    sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-    sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-    
-    export DEBIAN_FRONTEND=noninteractive
-    # Install packages - note, no need to link node to nodejs, this is done already
-    apt update && apt install -y build-essential curl ruby unzip nodejs git
-    
-    # Add dependencies
-    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-    
-    # ###### #
-    # DOCKER #
-    # ###### #
-    # Add dependencies
-    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-    
-    # Add repo key
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    # Add Docker repo
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    # Add Docker 
-    apt update && apt install -y docker-ce docker-ce-cli containerd.io
-    # Add Vagrant user to Docker group
-    usermod -a -G docker vagrant
-
-
-    # ###### #
-    # PODMAN #
-    # ###### #
-    
-    # can not install podman via apt @ubuntu focal64
-    ## . /etc/os-release
-    ## echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-    ## curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key | apt-key add -
-    ## apt-get update
-    ## apt-get -y upgrade
-    ## apt-get -y install podman
-  
-  SHELL
 
 end

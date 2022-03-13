@@ -10,3 +10,14 @@
 
     - 当使用远程主机 构建时，为按需初始化。如果持续 1 hr 没新的构建任务，会自动删除自己。
     Ref: https://hujingnb.com/archives/663
+
+
+## 安装
+
+依赖
+
+- virtualbox + virtualbox ext
+- vagrant
+- `vagrant plugin install vagrant-hostmanager`
+
+
