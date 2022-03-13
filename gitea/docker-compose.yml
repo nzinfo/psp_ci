@@ -4,35 +4,24 @@ networks:
   gitea:
     external: false
 
-# TODO: create account for drone.io
-
 services:
   
-  setup:                                              # init users.
-    image: gitea/gitea:1.16.3
-    environment:  # pass env variables by env-file. ref: https://docs.docker.com/compose/env-file/
-      - USER_UID:1000
-      - USER_GID:1000
-      - HTTP_PORT:8080 
-    volumes:
-      - /vagrant_data/data/gitea:/data                # map vagrant_data to gitea's docker volumn 
-      - /home/vagrant/.ssh/:/data/git/.ssh            # use vagrant-host's ssh config.
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    networks:
-      - gitea
-    command: >
-      gitea admin user create --username "${GITEA_ADMIN}" --password "${GITEA_ADMIN_PASSWD}" --email "${GITEA_ADMIN_EMAIL}" --admin
-     
   gitserver:
     image: gitea/gitea:1.16.3
     container_name: gitea
-    environment:  # pass env variables by env-file. ref: https://docs.docker.com/compose/env-file/
-      - USER_UID:1000
-      - USER_GID:1000
-      - HTTP_PORT:8080   
-    depends_on:
-      - setup
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - APP_NAME="Gitea:A personal git repository for CI/CD"
+      - DOMAIN="git.local"
+      - SSH_DOMAIN="git.local"
+      - SSH_PORT=8022
+      - SSH_LISTEN_PORT=22
+      - HTTP_PORT=8080                                # change gitea default to 8080
+      - LFS_START_SERVER=true 
+      - INSTALL_LOCK=true 
+      - DISABLE_REGISTRATION=true
+      - REQUIRE_SIGNIN_VIEW=false 
     restart: always
     networks:
       - gitea
@@ -44,3 +33,21 @@ services:
     ports:
       - "8080:8080"
       - "8022:22"
+  
+  post_setup:                                              # init users.
+    image: gitea/gitea:1.16.3
+    depends_on:
+      - gitserver
+    volumes:
+      - /vagrant_data/data/gitea:/data                # map vagrant_data to gitea's docker volumn 
+      - /home/vagrant/.ssh/:/data/git/.ssh            # use vagrant-host's ssh config.
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    networks:
+      - gitea
+    command: -c "gitea admin user create --username \"${GITEA_ADMIN}\" --password \"${GITEA_ADMIN_PASSWD}\" --email \"${GITEA_ADMIN_EMAIL}\" --admin" git
+  # TODO: create account for drone.io
+     
