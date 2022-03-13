@@ -27,19 +27,50 @@ Vagrant.configure("2") do |config|
   # directory on the host machine
   config.vm.synced_folder ENV["HOME"]+"/personal_ci", "/vagrant_home", owner: "vagrant", group: "vagrant"
 
+  # Setup mirrors
+  # config.vm.provision :shell, :inline => "sed -i 's|deb http://archive.ubuntu.com.ubuntu|deb mirror://mirrors.ubuntu.com/mirrors.txt|g' /etc/apt/sources.list"
+  # config.vm.provision "shell", inline: "sed -i '/deb-src/d' /etc/apt/sources.list"
+  # config.vm.provision "shell", inline: "apt-get update -y"
+
   config.vm.provision "shell", env: provision_environment , inline: <<-SHELL
+    # "Replacing source list"
+    sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+    sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+    
+    export DEBIAN_FRONTEND=noninteractive
     # Install packages - note, no need to link node to nodejs, this is done already
     apt update && apt install -y build-essential curl ruby unzip nodejs git
+    
+    # Add dependencies
+    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+    
+    # ###### #
+    # DOCKER #
+    # ###### #
+    # Add dependencies
+    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+    
+    # Add repo key
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    # Add Docker repo
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    # Add Docker 
+    apt update && apt install -y docker-ce docker-ce-cli containerd.io
+    # Add Vagrant user to Docker group
+    usermod -a -G docker vagrant
+
 
     # ###### #
     # PODMAN #
     # ###### #
-    . /etc/os-release
-    echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-    curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key | apt-key add -
-    apt-get update
-    apt-get -y upgrade
-    apt-get -y install podman
+    
+    # can not install podman via apt @ubuntu focal64
+    ## . /etc/os-release
+    ## echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+    ## curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key | apt-key add -
+    ## apt-get update
+    ## apt-get -y upgrade
+    ## apt-get -y install podman
   
   SHELL
 
