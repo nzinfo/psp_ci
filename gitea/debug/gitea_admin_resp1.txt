@@ -1,0 +1,1 @@
+[36m2022/03/14 16:47:59 [0m[32mmain.go:117:[32mmain()[0m [1;41m[F][0m Failed to run app with [1m[/usr/local/bin/gitea admin user create --username gitea --password git --email git@local --admin --access-token][0m: [1mCreateUser: user already exists [name: gitea][0m

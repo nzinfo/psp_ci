@@ -11,13 +11,18 @@ docker-compose --env-file /vagrant_data/gitea/.env -f /vagrant_data/gitea/docker
 source /vagrant_data/drone/drone_with_gitea.sh
 
 # 用于配置 drone 的 OAuth 信息
-DRONE_OAUTH_APP_CLIENT_ID='na'
-DRONE_OAUTH_APP_CLIENT_SECRET='' 
+# DRONE_OAUTH_APP_CLIENT_ID='na'
+# DRONE_OAUTH_APP_CLIENT_SECRET='' 
+GITEA_CLIENT_ID='na'
+GITEA_CLIENT_SECRET=''
 
-DRONE_OAUTH_APP_CLIENT_ID=`cat /vagrant_data/data/drone/oauth_secret.json | jq '.client_id' `
-DRONE_OAUTH_APP_CLIENT_SECRET=`cat /vagrant_data/data/drone/oauth_secret.json | jq '.client_secret' `
+export GITEA_CLIENT_ID=`cat /vagrant_data/data/drone/oauth_secret.json | jq -r '.client_id' `
+export GITEA_CLIENT_SECRET=`cat /vagrant_data/data/drone/oauth_secret.json | jq -r '.client_secret' `
+export GIT_SERVER_NAME="gitea.pdev"
+export CI_SERVER_NAME="drone.pdev"
+export GITTEA_SERVER_PORT=8080         
 
-if [[ -n $DRONE_OAUTH_APP_CLIENT_SECRET ]];
+if [[ -n $GITEA_CLIENT_SECRET ]];
 then
     docker-compose --env-file /vagrant_data/drone/.env -f /vagrant_data/drone/docker-compose.yml  up -d 
 fi 

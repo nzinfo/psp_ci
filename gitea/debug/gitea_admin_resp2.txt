@@ -1,0 +1,2 @@
+Access token was successfully created... 0e1e4f94e671c47cfaeee3f31c50264d5c4b1ebc
+New user 'gitea' has been successfully created!

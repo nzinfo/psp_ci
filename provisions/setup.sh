@@ -26,7 +26,7 @@ then
     apt update && apt install -y docker-ce docker-ce-cli containerd.io
     # Add Vagrant user to Docker group
     usermod -a -G docker vagrant
-    /usr/bin/docker
+    # /usr/bin/docker
 fi
 
 # Add Docker-compose , -sS for slience
