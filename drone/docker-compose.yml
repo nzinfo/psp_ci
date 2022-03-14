@@ -1,0 +1,67 @@
+version: "3"
+
+networks:
+  drone:
+    external: false
+
+services:
+
+  # drone.io
+  drone-server:
+    image: drone/drone:2.11.0
+    depends_on:
+      - gitserver
+    container_name: drone.server
+    ports:
+      - ${DRONE_SERVER_PORT:-8000}:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /vagrant_data/data/drone/:/var/lib/drone
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    # env_file:
+    #  - /vagrant_data/drone/server.env
+    environment:
+      - DRONE_GITEA=true
+      # 配置 OAuth APP.
+      - DRONE_GITEA_CLIENT_ID=${GITEA_CLIENT_ID}
+      - DRONE_GITEA_CLIENT_SECRET=${GITEA_CLIENT_SECRET}
+
+      - DRONE_GITEA_SERVER=${GIT_SERVER_PROTO}://${GIT_SERVER_NAME}:${GITTEA_SERVER_PORT}               
+
+      - DRONE_SERVER_HOST=${DRONE_SERVER_IP}:${DRONE_SERVER_PORT:-8000}       # DRONE_SERVER_IP is $CI_SERVER_IP
+      - DRONE_SERVER_PROTO=${DRONE_SERVER_PROTO}
+      
+      
+      - DRONE_DEBUG=true
+      - DRONE_GIT_ALWAYS_AUTH=false
+      - DRONE_RUNNER_CAPACITY=${DRONE_RUNNER_CAPACITY}
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      - DRONE_TLS_AUTOCERT=false
+      
+      # 数据库
+      - DRONE_DATABASE_DATASOURCE=/var/lib/drone/drone.sqlite
+      - DRONE_DATABASE_DRIVER=sqlite3
+      - TZ=${TIMEZONE}
+    restart: always
+    networks:
+      - drone
+    extra_hosts:
+      - "git.local:${GIT_SERVER_IP}"
+      - "ci.local:${CI_SERVER_IP}"
+    
+  drone-agent:
+    image: drone/agent:2.11.0
+    container_name: drone-agent
+    depends_on:
+      - drone-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DRONE_RPC_SERVER=drone-server:9000
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      - DRONE_RUNNER_CAPACITY=${DRONE_RUNNER_CAPACITY:-2}
+      - DRONE_DEBUG=true
+      - TZ=Asia/Shanghai
+    restart: always
+   

@@ -10,10 +10,7 @@ export DEBIAN_FRONTEND=noninteractive
 if ! command -v /usr/bin/docker &> /dev/null
 then
     # Install packages - note, no need to link node to nodejs, this is done already
-    apt update && apt install -y build-essential curl ruby unzip nodejs git
-    
-    # Add dependencies
-    apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+    apt update && apt install -y build-essential curl unzip git jq 
     
     # ###### #
     # DOCKER #

@@ -23,7 +23,11 @@ Vagrant.configure("2") do |config|
 
   # pass global env to vm. eg. secret key to aliyun ? 
   provision_environment = {
-    "VAULT_AUTH_TOKEN" => ENV["VAULT_AUTH_TOKEN"]
+    "VAULT_AUTH_TOKEN" => ENV["VAULT_AUTH_TOKEN"],
+    "GIT_SERVER_IP" => ENV["PDEV_GIT_IP"] || '192.168.62.22',
+    "CI_SERVER_IP" => ENV["PDEV_CI_IP"] || '192.168.62.22',
+    "GIT_SERVER_NAME" => "git.local",
+    "CI_SERVER_NAME" => "cu.local"
   }
 
   # As of VirtualBox 6.1.28, host-only network adapters are restricted to IPs 
@@ -31,8 +35,9 @@ Vagrant.configure("2") do |config|
   config.vm.define 'git-box' do |gitnode|
 
     gitnode.vm.hostname = 'gitea'
-    gitnode.vm.network :private_network, ip: '192.168.62.22'
-    gitnode.hostmanager.aliases = %w(git.local gitea.pci)
+    gitnode.vm.network :private_network, ip: provision_environment['GIT_SERVER_IP']
+    # 注意别名: git.local 表示是本地 git 服务的抽象概念，当使用一般意义上的 git 服务时引用； gitea.pdev 表示是 具象的 gitea 承载，
+    gitnode.hostmanager.aliases = %w(git.local gitea.pdev ci.local drone.pdev)
     
     # git usage
     gitnode.vm.network "forwarded_port", guest: 8080, host: 8080

@@ -10,11 +10,11 @@ services:
     image: gitea/gitea:1.16.3
     container_name: gitea
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
-      - APP_NAME="Gitea:A personal git repository for CI/CD"
-      - DOMAIN="git.local"
-      - SSH_DOMAIN="git.local"
+      - USER_UID=${GITEA_USER_UID}
+      - USER_GID=${GITEA_USER_UID}
+      - APP_NAME="${GITTEA_APP_NAME}"
+      - DOMAIN=${GIT_SERVER_NAME} 
+      - SSH_DOMAIN=${GIT_SERVER_NAME}
       - SSH_PORT=8022
       - SSH_LISTEN_PORT=22
       - HTTP_PORT=8080                                # change gitea default to 8080
@@ -22,6 +22,7 @@ services:
       - INSTALL_LOCK=true 
       - DISABLE_REGISTRATION=true
       - REQUIRE_SIGNIN_VIEW=false 
+      - TZ=${TIMEZONE}
     restart: always
     networks:
       - gitea
@@ -30,8 +31,11 @@ services:
       - /home/vagrant/.ssh/:/data/git/.ssh            # use vagrant-host's ssh config.
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    extra_hosts:
+      - "git.local:${GIT_SERVER_IP}"
+      - "ci.local:${CI_SERVER_IP}"
     ports:
-      - "8080:8080"
+      - ${GITTEA_SERVER_PORT:-8080}:8080
       - "8022:22"
   
   post_setup:                                              # init users.
@@ -44,10 +48,11 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
+      - USER_UID=${GITEA_USER_UID}
+      - USER_GID=${GITEA_USER_UID}
+      - TZ=${TIMEZONE}
     networks:
       - gitea
-    command: -c "gitea admin user create --username \"${GITEA_ADMIN}\" --password \"${GITEA_ADMIN_PASSWD}\" --email \"${GITEA_ADMIN_EMAIL}\" --admin" git
-  # TODO: create account for drone.io
-     
+    entrypoint: /bin/su                             # can NOT run gitea as root even add user via 
+    command: -c "gitea admin user create --username \"${GITEA_ADMIN}\" --password \"${GITEA_ADMIN_PASSWD}\" --email \"${GITEA_ADMIN_EMAIL}\" --admin --access-token >/data/gitea_admin_resp.txt" git
+  
