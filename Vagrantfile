@@ -46,7 +46,7 @@ Vagrant.configure("2") do |config|
 
     # customized virtualbox
     gitnode.vm.provider "virtualbox" do |v|
-      v.memory = 1024
+      v.memory = 2048
       v.cpus = 2
       v.gui = false
 

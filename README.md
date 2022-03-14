@@ -21,3 +21,10 @@
 - `vagrant plugin install vagrant-hostmanager`
 
 
+## 开发说明
+
+1. gitea 在关闭 web 初始化之后，只能通过命令行初始化管理员账号。使用了 依赖的 ，只执行一次的 service 创建。
+    
+    - 因为无法创建同名账号，此操作是幂等的。
+
+2. 与 drone.io 绑定时，需要使用 OAuth 机制同步信息。而 OAuth 机制绑定到个体用户上

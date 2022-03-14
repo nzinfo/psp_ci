@@ -44,6 +44,7 @@ services:
       - gitserver
     volumes:
       - /vagrant_data/data/gitea:/data                # map vagrant_data to gitea's docker volumn 
+      - /vagrant_data/gitea/create_admin.sh:/user/local/bin/create_gitea_admin.sh
       - /home/vagrant/.ssh/:/data/git/.ssh            # use vagrant-host's ssh config.
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
@@ -54,7 +55,5 @@ services:
     networks:
       - gitea
     entrypoint: /bin/su                             # can NOT run gitea as root even add user via , and require a addtional sleep wait gitserver initialized.
-    command: -c "sleep 5 && gitea admin user create --username \"${GITEA_ADMIN}\" 
-        --password \"${GITEA_ADMIN_PASSWD}\" --email \"${GITEA_ADMIN_EMAIL}\" 
-        --admin --access-token | grep \"Access token was successfully created\" | sed 's/.*... /\\n/g' | sed -n '2p' >>/data/gitea_admin_resp.txt" git
+    command: -c "bash /user/local/bin/create_gitea_admin.sh" git
   

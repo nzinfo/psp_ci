@@ -9,9 +9,7 @@ services:
   # drone.io
   drone-server:
     image: drone/drone:2.11.0
-    depends_on:
-      - gitserver
-    container_name: drone.server
+    container_name: drone-server
     ports:
       - ${DRONE_SERVER_PORT:-8000}:80
     volumes:
@@ -32,7 +30,7 @@ services:
       - DRONE_SERVER_HOST=${CI_SERVER_NAME}:${DRONE_SERVER_PORT:-8000}       #  用于当 OAuth 完毕时，进行 callback.
       - DRONE_SERVER_PROTO=${DRONE_SERVER_PROTO}
       
-      
+      - DRONE_USER_CREATE=username:${GITEA_ADMIN},admin:true
       - DRONE_DEBUG=true
       - DRONE_GIT_ALWAYS_AUTH=false
       - DRONE_RUNNER_CAPACITY=${DRONE_RUNNER_CAPACITY}
@@ -49,6 +47,28 @@ services:
     extra_hosts:
       - "git.local:${GIT_SERVER_IP}"
       - "ci.local:${CI_SERVER_IP}"
-    
-
-   
+      - "gitea.pdev:${GIT_SERVER_IP}"
+      - "drone.pdev:${CI_SERVER_IP}"
+  
+  drone-runner:
+    image: drone/drone-runner-docker:1
+    container_name: runner
+    restart: always
+    depends_on:
+      - drone-server
+    networks:
+      - drone
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment: 
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}            # 不能使用 “ ”
+      - DRONE_RPC_HOST=${CI_SERVER_NAME}:${DRONE_SERVER_PORT:-8000}
+      - DRONE_RPC_PROTO=${DRONE_SERVER_PROTO}
+      - DRONE_RUNNER_CAPACITY=${DRONE_RUNNER_CAPACITY}
+      - DRONE_TRACE=true 
+      - DRONE_RUNNER_NETWORKS=drone
+    extra_hosts:
+      - "git.local:${GIT_SERVER_IP}"
+      - "ci.local:${CI_SERVER_IP}"
+      - "gitea.pdev:${GIT_SERVER_IP}"
+      - "drone.pdev:${CI_SERVER_IP}"
